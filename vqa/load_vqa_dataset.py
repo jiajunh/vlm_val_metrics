@@ -38,15 +38,31 @@ class VQADataset(Dataset):
         self.pre_prompt = pre_prompt
         self.post_prompt = post_prompt
         self.model_config = model_config
+        self.model_type = "llava"
+        if "model_type" in model_config:
+            self.model_type = model_config["model_type"]
 
     def __getitem__(self, index):
-        prompt = f"USER: {self.pre_prompt}\n {self.questions[index]}. {self.post_prompt}\nASSISTANT:"
-        image = Image.open(self.images[index]).convert("RGB")
-        img_np = np.asarray(image)
+        if self.model_type == "llava":
+            prompt = f"USER: {self.pre_prompt}\n {self.questions[index]}. {self.post_prompt}\nASSISTANT:"
+        elif self.model_type == "qwenvl":
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": f"{self.questions[index]}. {self.post_prompt}"},
+                    ],
+                }
+            ]
+            prompt = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        image = Image.open(self.images[index]).convert("RGB").copy()
+        if self.model_type == "llava":
+            image = np.asarray(image)
 
-        inputs = self.processor(images=img_np, text=prompt, return_tensors='pt')
+        inputs = self.processor(images=image, text=prompt, return_tensors='pt')
         if self.model_config["device"]:
-            inputs = inputs.to(self.model_config["device"], torch.float16)
+            inputs = inputs.to(self.model_config["device"])
         # print(inputs["input_ids"].shape, inputs["attention_mask"].shape, inputs["pixel_values"].shape)
         return (inputs, self.question_ids[index])
 
@@ -62,5 +78,9 @@ def create_data_loader(questions, question_ids, images, processor, model_config,
                             model_config=model_config, 
                             pre_prompt=pre_prompt, 
                             post_prompt=post_prompt)
-    data_loader = DataLoader(vqa_dataset, batch_size=1, shuffle=False)
-    return data_loader
+    def collate_one(batch):
+        # batch == [(inputs, qid)]
+        return batch[0]
+    return DataLoader(vqa_dataset, batch_size=1, shuffle=False, collate_fn=collate_one)
+    # data_loader = DataLoader(vqa_dataset, batch_size=1, shuffle=False)
+    # return data_loader
