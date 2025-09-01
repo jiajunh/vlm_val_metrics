@@ -128,23 +128,41 @@ def make_cross_attention_forward(layer_idx, rotary_emb, ca_img=True, use_cross_a
             # k = ca_k.view(batch_size, -1, num_heads, head_dim).transpose(1, 2)
             # v = ca_v.view(batch_size, -1, num_heads, head_dim).transpose(1, 2)
 
-
-            # q, k = apply_rotary_pos_emb(q, q, cos, sin)
             q, _ = hf_apply_mrope(
                 q, q, cos, sin, self.self_attn.rope_scaling["mrope_section"]
             )
 
-            k = repeat_kv(past_key_value.key_cache[layer_idx], self.self_attn.num_key_value_groups)
-            v = repeat_kv(past_key_value.value_cache[layer_idx], self.self_attn.num_key_value_groups)
-    
-            attn_scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(head_dim)
+            k_full = past_key_value.key_cache[layer_idx]
+            v_full = past_key_value.value_cache[layer_idx]
+
+            # # new selections
+            # KV = k_full.size(2)
+            # keep = torch.zeros(KV, dtype=torch.bool, device=device)
+            # if ca_img:
+            #     # attend to image span only (inclusive of start/end)
+            #     keep[self.img_start_idx : self.img_end_idx + 1] = True
+            # else:
+            #     # attend to text-only columns (exclude the image span)
+            #     keep[: self.img_start_idx] = True
+            #     keep[self.img_end_idx + 1 : ] = True
+
+            # k_sel = k_full[:, :, keep, :]
+            # v_sel = v_full[:, :, keep, :] 
+
+            # k_sel = repeat_kv(k_sel, self.self_attn.num_key_value_groups)
+            # v_sel = repeat_kv(v_sel, self.self_attn.num_key_value_groups)
+
+            k_sel = repeat_kv(k_full, self.self_attn.num_key_value_groups)
+            v_sel = repeat_kv(v_full, self.self_attn.num_key_value_groups)
+
+            attn_scores = torch.matmul(q, k_sel.transpose(-2, -1)) / math.sqrt(head_dim)
             attn_scores += inverse_modified_attention_mask
 
             attn_weights = F.softmax(attn_scores, dim=-1)
-            attn_output = torch.matmul(attn_weights, v)
+            attn_output = torch.matmul(attn_weights, v_sel)
+
             attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, hidden_dim)
             hidden_states = self.self_attn.o_proj(attn_output)
-
 
         residual = residual.to(hidden_states.device)
         hidden_states = residual + hidden_states
@@ -157,13 +175,13 @@ def make_cross_attention_forward(layer_idx, rotary_emb, ca_img=True, use_cross_a
 
         # output
         outputs = (hidden_states,)
-        # outputs = (cross_hidden_states,)
+        
         if output_attentions:
-            if use_cross_attention:
-                outputs += (attn_weights,)
-            else:
-                outputs += (self_attn_weights,)
-            # outputs += (self_attn_weights,)
+            # if use_cross_attention:
+            #     outputs += (attn_weights,)
+            # else:
+            #     outputs += (self_attn_weights,)
+            outputs += (self_attn_weights,)
 
         if use_cache:
             outputs += (present_key_value,)
