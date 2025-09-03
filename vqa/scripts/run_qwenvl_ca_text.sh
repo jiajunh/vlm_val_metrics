@@ -4,8 +4,8 @@
 #SBATCH --mem=24G
 #SBATCH -t 0-16:00
 #SBATCH -p gpu
-#SBATCH -o /n/netscratch/kdbrantley_lab/Lab/jiajunh/test_verl/logs/qwenvl_ca_text_%j.out
-#SBATCH -e /n/netscratch/kdbrantley_lab/Lab/jiajunh/test_verl/logs/qwenvl_ca_text_%j.err
+#SBATCH -o /n/netscratch/kdbrantley_lab/Lab/jiajunh/vlm_val/logs/qwenvl_ca_text_%j.out
+#SBATCH -e /n/netscratch/kdbrantley_lab/Lab/jiajunh/vlm_val/logs/qwenvl_ca_text_%j.err
 #SBATCH --gres=gpu:nvidia_a100-sxm4-80gb:1
 
 
@@ -16,7 +16,7 @@ python --version
 cd /n/netscratch/kdbrantley_lab/Lab/jiajunh/vlm_val/vqa
 
 nvidia-smi
-
+ 
 python qwenvl.py \
     --image_dir './vqa_samples_1k_2/images/' \
     --annotation_file './vqa_samples_1k_2/annotations.json' \

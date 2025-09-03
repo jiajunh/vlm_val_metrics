@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --job-name=qwenvl_ca_image
-#SBATCH --mem=24G
-#SBATCH -t 0-16:00
-#SBATCH -p gpu
-#SBATCH -o /n/netscratch/kdbrantley_lab/Lab/jiajunh/test_verl/logs/qwenvl_ca_image_%j.out
-#SBATCH -e /n/netscratch/kdbrantley_lab/Lab/jiajunh/test_verl/logs/qwenvl_ca_image_%j.err
+#SBATCH --mem=32G
+#SBATCH -t 0-12:00
+#SBATCH -p gpu_requeue
+#SBATCH -o /n/netscratch/kdbrantley_lab/Lab/jiajunh/vlm_val/logs/qwenvl_ca_image_%j.out
+#SBATCH -e /n/netscratch/kdbrantley_lab/Lab/jiajunh/vlm_val/logs/qwenvl_ca_image_%j.err
 #SBATCH --gres=gpu:nvidia_a100-sxm4-80gb:1
 
 mamba activate llava
@@ -24,4 +24,5 @@ python qwenvl.py \
     --use_cross_attention \
     --cross_attention_image \
     --layer_type "1" \
-    --target_layers 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35
+    --target_layers 27 28 29 30 31 32 33 34 35
+    # --target_layers 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35

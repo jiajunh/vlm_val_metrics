@@ -27,10 +27,11 @@ from load_vqa_dataset import create_data_loader, construct_image_dict, construct
 GLOBAL_FIRST_IMG_IDX = 15
 
 def load_model(model_name_or_path, device_map="auto"):
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16
-    )
+    quantization_config = None
+    # quantization_config = BitsAndBytesConfig(
+    #     load_in_4bit=True,
+    #     bnb_4bit_compute_dtype=torch.float16
+    # )
     processor = AutoProcessor.from_pretrained(model_name_or_path)
     tokenizer = processor.tokenizer
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_name_or_path,
